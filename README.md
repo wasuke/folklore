@@ -1,8 +1,8 @@
-# SNS怪談・4要素分析プロトタイプ→　[demo]（https://wasuke.github.io/folklore/）
-
+# SNS怪談・4要素分析プロトタイプ
 ## 概要
 
 本システムは、SNS上の怪談投稿を対象に、以下の4要素を推定する実験的分析ツールである。
+[demo]（https://wasuke.github.io/folklore/）
 
 ・実話性\
 ・匿名性\
