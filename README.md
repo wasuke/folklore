@@ -1,4 +1,4 @@
-# SNS怪談・4要素分析プロトタイプ
+# SNS怪談・4要素分析プロトタイプ→　[demo]（https://wasuke.github.io/folklore/）
 
 ## 概要
 
