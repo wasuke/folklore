@@ -1,0 +1,27 @@
+{
+    "TikTok": {
+        "engagementWeight": 0.40,
+        "fourFactorWeight": 0.60,
+        "description": "短尺動画・参加型拡散が強い"
+    },
+    "X": {
+        "engagementWeight": 0.30,
+        "fourFactorWeight": 0.70,
+        "description": "言語拡散・引用文化"
+    },
+    "YouTube Shorts": {
+        "engagementWeight": 0.35,
+        "fourFactorWeight": 0.65,
+        "description": "視聴維持と反応の混合型"
+    },
+    "Instagram": {
+        "engagementWeight": 0.45,
+        "fourFactorWeight": 0.55,
+        "description": "視覚中心・保存重視"
+    },
+    "default": {
+        "engagementWeight": 0.30,
+        "fourFactorWeight": 0.70,
+        "description": "未定義媒体"
+    }
+}
