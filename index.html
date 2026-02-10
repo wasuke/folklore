@@ -1,416 +1,357 @@
 <!doctype html>
 <html lang="ja">
-
 <head>
-    <meta charset="utf-8" />
-    <meta name="viewport" content="width=device-width,initial-scale=1" />
-    <title>SNS怪談・4要素プロトタイプ（外部JSON分離版）</title>
-    <style>
-        :root {
-            --bg: #0b0c10;
-            --panel: #141621;
-            --text: #e8e9ef;
-            --muted: #a7acbd;
-            --line: #2a2f44;
-        }
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>SNS怪談・4要素プロトタイプ（外部JSON編集UIつき）</title>
+  <style>
+    :root { --bg:#0b0c10; --panel:#141621; --text:#e8e9ef; --muted:#a7acbd; --line:#2a2f44; }
+    * { box-sizing:border-box; }
+    body{
+      margin:0; padding:20px;
+      font-family: system-ui, -apple-system, "Hiragino Sans", "Noto Sans JP", sans-serif;
+      background: radial-gradient(1200px 600px at 10% 0%, #121633 0%, var(--bg) 55%);
+      color:var(--text);
+    }
+    h1{ margin:0 0 10px; font-size:20px; }
+    .grid{ display:grid; grid-template-columns: 1.2fr .8fr; gap:14px; align-items:start; }
+    @media (max-width: 980px){ .grid{ grid-template-columns:1fr; } }
+    .card{
+      background: rgba(20,22,33,.92);
+      border:1px solid var(--line);
+      border-radius:14px;
+      padding:14px;
+      box-shadow: 0 10px 25px rgba(0,0,0,.25);
+    }
+    .row{ display:flex; gap:10px; flex-wrap:wrap; }
+    .row > *{ flex:1; min-width:180px; }
+    label{ display:block; font-size:12px; color:var(--muted); margin:0 0 6px; }
+    textarea, input, select{
+      width:100%;
+      background:#0f1120;
+      color:var(--text);
+      border:1px solid var(--line);
+      border-radius:10px;
+      padding:10px;
+      outline:none;
+    }
+    textarea{
+      resize:vertical;
+      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Noto Sans Mono", monospace;
+      line-height:1.5;
+    }
+    button{
+      background:#2b61ff;
+      color:white;
+      border:0;
+      border-radius:12px;
+      padding:10px 12px;
+      cursor:pointer;
+      font-weight:600;
+    }
+    button.secondary{ background:#22263a; border:1px solid var(--line); }
+    button:disabled{ opacity:.6; cursor:not-allowed; }
+    .help{ color:var(--muted); font-size:12px; line-height:1.5; margin-top:8px; }
+    .list{ display:flex; flex-direction:column; gap:10px; }
+    .item{
+      border:1px solid var(--line);
+      border-radius:12px;
+      padding:12px;
+      background:#0f1120;
+    }
+    .meta{ display:flex; gap:10px; flex-wrap:wrap; color:var(--muted); font-size:12px; }
+    .text{ margin:8px 0 10px; line-height:1.6; }
+    .scores{
+      display:grid;
+      grid-template-columns: 120px 1fr 60px;
+      gap:8px;
+      align-items:center;
+      font-size:12px;
+      margin-top:8px;
+    }
+    .bar{
+      height:10px;
+      background:#161a2e;
+      border:1px solid var(--line);
+      border-radius:999px;
+      overflow:hidden;
+    }
+    .fill{ height:100%; background: linear-gradient(90deg, #2b61ff, #7c4dff); width:0%; }
+    .tag{
+      display:inline-flex; align-items:center; gap:6px;
+      padding:4px 8px; border-radius:999px;
+      border:1px solid var(--line); background:#10122a;
+      color:var(--muted); font-size:12px;
+    }
+    .mono{ font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Noto Sans Mono", monospace; }
+    .hr{ height:1px; background:var(--line); margin:12px 0; }
+    .small{ font-size:12px; color:var(--muted); }
+    .danger{ color:#ffb4b4; }
+    .ok{ color:#b8ffcc; }
+    .path{ font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Noto Sans Mono", monospace; }
 
-        * {
-            box-sizing: border-box;
-        }
-
-        body {
-            margin: 0;
-            padding: 20px;
-            font-family: system-ui, -apple-system, "Hiragino Sans", "Noto Sans JP", sans-serif;
-            background: radial-gradient(1200px 600px at 10% 0%, #121633 0%, var(--bg) 55%);
-            color: var(--text);
-        }
-
-        h1 {
-            margin: 0 0 10px;
-            font-size: 20px;
-        }
-
-        .grid {
-            display: grid;
-            grid-template-columns: 1.1fr .9fr;
-            gap: 14px;
-            align-items: start;
-        }
-
-        @media (max-width: 980px) {
-            .grid {
-                grid-template-columns: 1fr;
-            }
-        }
-
-        .card {
-            background: rgba(20, 22, 33, .92);
-            border: 1px solid var(--line);
-            border-radius: 14px;
-            padding: 14px;
-            box-shadow: 0 10px 25px rgba(0, 0, 0, .25);
-        }
-
-        .row {
-            display: flex;
-            gap: 10px;
-            flex-wrap: wrap;
-        }
-
-        .row>* {
-            flex: 1;
-            min-width: 160px;
-        }
-
-        label {
-            display: block;
-            font-size: 12px;
-            color: var(--muted);
-            margin: 0 0 6px;
-        }
-
-        textarea,
-        input,
-        select {
-            width: 100%;
-            background: #0f1120;
-            color: var(--text);
-            border: 1px solid var(--line);
-            border-radius: 10px;
-            padding: 10px;
-            outline: none;
-        }
-
-        textarea {
-            min-height: 220px;
-            resize: vertical;
-            font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Noto Sans Mono", monospace;
-        }
-
-        button {
-            background: #2b61ff;
-            color: white;
-            border: 0;
-            border-radius: 12px;
-            padding: 10px 12px;
-            cursor: pointer;
-            font-weight: 600;
-        }
-
-        button.secondary {
-            background: #22263a;
-            border: 1px solid var(--line);
-        }
-
-        button:disabled {
-            opacity: .6;
-            cursor: not-allowed;
-        }
-
-        .help {
-            color: var(--muted);
-            font-size: 12px;
-            line-height: 1.5;
-            margin-top: 8px;
-        }
-
-        .list {
-            display: flex;
-            flex-direction: column;
-            gap: 10px;
-        }
-
-        .item {
-            border: 1px solid var(--line);
-            border-radius: 12px;
-            padding: 12px;
-            background: #0f1120;
-        }
-
-        .meta {
-            display: flex;
-            gap: 10px;
-            flex-wrap: wrap;
-            color: var(--muted);
-            font-size: 12px;
-        }
-
-        .text {
-            margin: 8px 0 10px;
-            line-height: 1.6;
-        }
-
-        .scores {
-            display: grid;
-            grid-template-columns: 120px 1fr 60px;
-            gap: 8px;
-            align-items: center;
-            font-size: 12px;
-            margin-top: 8px;
-        }
-
-        .bar {
-            height: 10px;
-            background: #161a2e;
-            border: 1px solid var(--line);
-            border-radius: 999px;
-            overflow: hidden;
-        }
-
-        .fill {
-            height: 100%;
-            background: linear-gradient(90deg, #2b61ff, #7c4dff);
-            width: 0%;
-        }
-
-        .tag {
-            display: inline-flex;
-            align-items: center;
-            gap: 6px;
-            padding: 4px 8px;
-            border-radius: 999px;
-            border: 1px solid var(--line);
-            background: #10122a;
-            color: var(--muted);
-            font-size: 12px;
-        }
-
-        .mono {
-            font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Noto Sans Mono", monospace;
-        }
-
-        .hr {
-            height: 1px;
-            background: var(--line);
-            margin: 12px 0;
-        }
-
-        .small {
-            font-size: 12px;
-            color: var(--muted);
-        }
-
-        .danger {
-            color: #ffb4b4;
-        }
-
-        .ok {
-            color: #b8ffcc;
-        }
-
-        .path {
-            font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Noto Sans Mono", monospace;
-        }
-    </style>
+    details{
+      border:1px solid var(--line);
+      border-radius:12px;
+      background:#0f1120;
+      padding:10px 10px 12px;
+      margin:10px 0;
+    }
+    summary{
+      cursor:pointer;
+      color:var(--text);
+      font-weight:700;
+      list-style:none;
+    }
+    summary::-webkit-details-marker{ display:none; }
+    .jsonbox{ margin-top:10px; }
+    .jsonbox textarea{ min-height:180px; }
+    .jsonhint{ margin-top:6px; }
+  </style>
 </head>
-
 <body>
-    <h1>SNS怪談・4要素プロトタイプ（外部JSON分離版）</h1>
+  <h1>SNS怪談・4要素プロトタイプ（外部JSON編集UIつき）</h1>
 
-    <div class="grid">
-        <div class="card">
-            <div class="row">
-                <div>
-                    <label>外部ファイル</label>
-                    <div class="small">
-                        投稿データ: <span class="path">data.json</span><br>
-                        語彙辞書: <span class="path">lex.json</span><br>
-                        媒体モデル: <span class="path">platforms.json</span>
-                    </div>
-                </div>
-                <div>
-                    <label>スコア感度（0.5〜2.0）</label>
-                    <input id="gain" type="number" min="0.5" max="2.0" step="0.1" value="1.0" />
-                </div>
-            </div>
-
-            <div class="hr"></div>
-
-            <label>読み込んだ data.json（確認用）</label>
-            <textarea id="dataPreview" readonly></textarea>
-
-            <div class="row" style="margin-top:12px;">
-                <button id="btnReload">外部JSONを再読み込み</button>
-                <button id="btnExport" class="secondary" disabled>解析結果JSONを書き出す</button>
-            </div>
-
-            <div class="help">
-                ローカルで開く場合はHTTPサーバー経由にしてください。例: <span class="path">python -m http.server 8000</span>。<span
-                    class="path">file:///</span> 直開きだと fetch が止まります。
-            </div>
+  <div class="grid">
+    <div class="card">
+      <div class="row">
+        <div>
+          <label>外部ファイル</label>
+          <div class="small">
+            投稿データ: <span class="path">data.json</span><br>
+            語彙辞書: <span class="path">lex.json</span><br>
+            媒体モデル: <span class="path">platforms.json</span>
+          </div>
         </div>
-
-        <div class="card">
-            <div class="row">
-                <div>
-                    <label>表示</label>
-                    <select id="sort">
-                        <option value="time">投稿時刻（新しい順）</option>
-                        <option value="buzz">バズ推定（高い順）</option>
-                        <option value="real">実話性（高い順）</option>
-                        <option value="anon">匿名性（高い順）</option>
-                        <option value="empa">共感性（高い順）</option>
-                        <option value="part">参加性（高い順）</option>
-                    </select>
-                </div>
-                <div>
-                    <label>しきい値（バズ推定）</label>
-                    <input id="buzzTh" type="number" min="0" max="1" step="0.05" value="0.55" />
-                </div>
-            </div>
-
-            <div class="hr"></div>
-            <div id="summary" class="small">未読み込み</div>
-            <div class="hr"></div>
-            <div id="results" class="list"></div>
+        <div>
+          <label>スコア感度（0.5〜2.0）</label>
+          <input id="gain" type="number" min="0.5" max="2.0" step="0.1" value="1.0" />
         </div>
+      </div>
+
+      <div class="hr"></div>
+
+      <div class="row">
+        <button id="btnReload">外部JSONを再読み込み</button>
+        <button id="btnRecalc" class="secondary">フォームの内容で再計算</button>
+        <button id="btnExport" class="secondary" disabled>解析結果JSONを書き出す</button>
+      </div>
+
+      <div class="help">
+        ローカルで開く場合はHTTPサーバー経由にしてください。例: <span class="path">python -m http.server 8000</span>。<span class="path">file:///</span> 直開きだと fetch が止まります。
+      </div>
+
+      <div class="hr"></div>
+
+      <div class="small">
+        下の3つのJSONはフォーム上で編集できます。<br>
+        編集後は「フォームの内容で再計算」を押してください。
+      </div>
+
+      <details open>
+        <summary>data.json（投稿データ）</summary>
+        <div class="jsonbox">
+          <label class="small">形式は配列です。text の改行は \\n を使います。</label>
+          <textarea id="taData" spellcheck="false"></textarea>
+          <div class="small jsonhint">例: [{ "id":"p1","platform":"TikTok","author":"匿名","postedAt":"2026-02-09T09:20:00","likes":10,"shares":1,"comments":2,"text":"…\\n…" }]</div>
+        </div>
+      </details>
+
+      <details>
+        <summary>lex.json（語彙辞書）</summary>
+        <div class="jsonbox">
+          <label class="small">キーは real / anon / empa / part です。各要素は { "w":[...], "p":0.xx } の配列です。</label>
+          <textarea id="taLex" spellcheck="false"></textarea>
+        </div>
+      </details>
+
+      <details>
+        <summary>platforms.json（媒体モデル）</summary>
+        <div class="jsonbox">
+          <label class="small">各媒体キーに { engagementWeight, fourFactorWeight, description } を置きます。default を用意します。</label>
+          <textarea id="taPlatforms" spellcheck="false"></textarea>
+        </div>
+      </details>
+
+      <div id="leftStatus" class="small">未読み込み</div>
     </div>
 
-    <script>
-        /*
-          外部JSON分離の構成
-          - data.json: 投稿データ（配列）
-          - lex.json: 4要素の語彙辞書（real/anon/empa/part）
-          - platforms.json: 媒体モデル（媒体ごとの重みと説明）
-        */
+    <div class="card">
+      <div class="row">
+        <div>
+          <label>表示</label>
+          <select id="sort">
+            <option value="time">投稿時刻（新しい順）</option>
+            <option value="buzz">バズ推定（高い順）</option>
+            <option value="real">実話性（高い順）</option>
+            <option value="anon">匿名性（高い順）</option>
+            <option value="empa">共感性（高い順）</option>
+            <option value="part">参加性（高い順）</option>
+          </select>
+        </div>
+        <div>
+          <label>しきい値（バズ推定）</label>
+          <input id="buzzTh" type="number" min="0" max="1" step="0.05" value="0.55" />
+        </div>
+      </div>
 
-        const $ = (id) => document.getElementById(id);
+      <div class="hr"></div>
+      <div id="summary" class="small">未読み込み</div>
+      <div class="hr"></div>
+      <div id="results" class="list"></div>
+    </div>
+  </div>
 
-        let LEX = null;
-        let PLATFORMS = null;
-        let lastAnalyzed = [];
+<script>
+const $ = (id) => document.getElementById(id);
 
-        function clamp01(x) { return Math.max(0, Math.min(1, x)); }
-        function nowIso() { return new Date().toISOString(); }
+let LEX = null;
+let PLATFORMS = null;
+let lastAnalyzed = [];
 
-        function normalizeText(s) {
-            return (s ?? "")
-                .toString()
-                .replace(/\r\n/g, "\n")
-                .replace(/\r/g, "\n")
-                .replace(/\t/g, " ")
-                .trim();
-        }
+function clamp01(x){ return Math.max(0, Math.min(1, x)); }
+function nowIso(){ return new Date().toISOString(); }
 
-        function toSafeTextAsHtml(s) {
-            return (s ?? "").toString()
-                .replaceAll("&", "&amp;")
-                .replaceAll("<", "&lt;")
-                .replaceAll(">", "&gt;")
-                .replace(/\r\n|\r|\n/g, "<br>");
-        }
+function normalizeText(s){
+  return (s ?? "")
+    .toString()
+    .replace(/\r\n/g, "\n")
+    .replace(/\r/g, "\n")
+    .replace(/\t/g, " ")
+    .trim();
+}
 
-        function countHits(text, words) {
-            const hits = [];
-            for (const w of words) {
-                if (!w) continue;
-                if (text.includes(w)) hits.push(w);
-            }
-            return hits;
-        }
+function toSafeTextAsHtml(s){
+  return (s ?? "").toString()
+    .replaceAll("&","&amp;")
+    .replaceAll("<","&lt;")
+    .replaceAll(">","&gt;")
+    .replace(/\r\n|\r|\n/g, "<br>");
+}
 
-        function scoreByLex(text, blocks, gain) {
-            let score = 0;
-            const evidence = [];
-            for (const b of blocks) {
-                const hits = countHits(text, b.w);
-                if (hits.length) {
-                    const add = b.p * Math.min(3, hits.length);
-                    score += add;
-                    evidence.push({ hits, add });
-                }
-            }
-            const len = text.length;
-            const lenFactor = len < 40 ? 0.75 : (len < 120 ? 0.90 : 1.00);
-            score = score * gain * lenFactor;
-            return { score: clamp01(score), evidence };
-        }
+function countHits(text, words){
+  const hits = [];
+  for(const w of words){
+    if(!w) continue;
+    if(text.includes(w)) hits.push(w);
+  }
+  return hits;
+}
 
-        function flattenEvidence(evs) {
-            const words = [];
-            for (const e of evs) {
-                for (const h of e.hits) words.push(h);
-            }
-            return [...new Set(words)].slice(0, 10);
-        }
+function scoreByLex(text, blocks, gain){
+  let score = 0;
+  const evidence = [];
+  for(const b of blocks){
+    const hits = countHits(text, b.w);
+    if(hits.length){
+      const add = b.p * Math.min(3, hits.length);
+      score += add;
+      evidence.push({hits, add});
+    }
+  }
+  const len = text.length;
+  const lenFactor = len < 40 ? 0.75 : (len < 120 ? 0.90 : 1.00);
+  score = score * gain * lenFactor;
+  return { score: clamp01(score), evidence };
+}
 
-        function engagementScore({ likes = 0, shares = 0, comments = 0 }) {
-            const l = Math.max(0, Number(likes) || 0);
-            const s = Math.max(0, Number(shares) || 0);
-            const c = Math.max(0, Number(comments) || 0);
-            const v = Math.log10(1 + l) * 0.55 + Math.log10(1 + s) * 0.90 + Math.log10(1 + c) * 0.70;
-            return clamp01(v / 3.5);
-        }
+function flattenEvidence(evs){
+  const words = [];
+  for(const e of evs){
+    for(const h of e.hits) words.push(h);
+  }
+  return [...new Set(words)].slice(0, 10);
+}
 
-        function anonymizeScoreBoost(author) {
-            const a = (author ?? "").toString().trim();
-            if (!a) return 0.10;
-            if (a === "匿名") return 0.18;
-            if (a.includes("anon") || a.includes("匿名")) return 0.12;
-            return 0.0;
-        }
+function engagementScore({likes=0, shares=0, comments=0}){
+  const l = Math.max(0, Number(likes)||0);
+  const s = Math.max(0, Number(shares)||0);
+  const c = Math.max(0, Number(comments)||0);
+  const v = Math.log10(1 + l) * 0.55 + Math.log10(1 + s) * 0.90 + Math.log10(1 + c) * 0.70;
+  return clamp01(v / 3.5);
+}
 
-        function fmt01(x) { return (Math.round(x * 100) / 100).toFixed(2); }
-        function fmtPct(x) { return `${Math.round(x * 100)}%`; }
+function anonymizeScoreBoost(author){
+  const a = (author ?? "").toString().trim();
+  if(!a) return 0.10;
+  if(a === "匿名") return 0.18;
+  if(a.includes("anon") || a.includes("匿名")) return 0.12;
+  return 0.0;
+}
 
-        function avg(posts, key) {
-            if (!posts.length) return 0;
-            let s = 0;
-            for (const p of posts) s += Number(p.scores[key] || 0);
-            return s / posts.length;
-        }
+function fmt01(x){ return (Math.round(x*100)/100).toFixed(2); }
+function fmtPct(x){ return `${Math.round(x*100)}%`; }
 
-        function getPlatformModel(platformName) {
-            if (!PLATFORMS) return { engagementWeight: 0.30, fourFactorWeight: 0.70, description: "未読み込み" };
-            return PLATFORMS[platformName] || PLATFORMS["default"] || { engagementWeight: 0.30, fourFactorWeight: 0.70, description: "未定義媒体" };
-        }
+function avg(posts, key){
+  if(!posts.length) return 0;
+  let s=0;
+  for(const p of posts) s += Number(p.scores[key]||0);
+  return s / posts.length;
+}
 
-        function analyzePost(post, gain) {
-            if (!LEX) {
-                throw new Error("lex.json が未読み込みです。");
-            }
+function getPlatformModel(platformName){
+  if(!PLATFORMS) return {engagementWeight:0.30, fourFactorWeight:0.70, description:"未読み込み"};
+  return PLATFORMS[platformName] || PLATFORMS["default"] || {engagementWeight:0.30, fourFactorWeight:0.70, description:"未定義媒体"};
+}
 
-            const text = normalizeText(post.text);
-            const r = scoreByLex(text, LEX.real || [], gain);
-            const a = scoreByLex(text, LEX.anon || [], gain);
-            const e = scoreByLex(text, LEX.empa || [], gain);
-            const p = scoreByLex(text, LEX.part || [], gain);
+function normalizePost(p, i){
+  return {
+    id: p.id ?? `p${i+1}`,
+    platform: p.platform ?? "不明",
+    author: p.author ?? "不明",
+    postedAt: p.postedAt ?? nowIso(),
+    likes: p.likes ?? 0,
+    shares: p.shares ?? 0,
+    comments: p.comments ?? 0,
+    text: p.text ?? ""
+  };
+}
 
-            const anonBoost = anonymizeScoreBoost(post.author);
-            const anon = clamp01(a.score + anonBoost);
-            const eng = engagementScore(post);
+function analyzePost(post, gain){
+  if(!LEX){
+    throw new Error("lex.json が未読み込みです。");
+  }
+  const text = normalizeText(post.text);
 
-            const platformModel = getPlatformModel(post.platform);
-            const fourMean = (r.score + anon + e.score + p.score) / 4;
+  const r = scoreByLex(text, LEX.real || [], gain);
+  const a = scoreByLex(text, LEX.anon || [], gain);
+  const e = scoreByLex(text, LEX.empa || [], gain);
+  const p = scoreByLex(text, LEX.part || [], gain);
 
-            const buzz = clamp01(
-                fourMean * Number(platformModel.fourFactorWeight ?? 0.70) +
-                eng * Number(platformModel.engagementWeight ?? 0.30)
-            );
+  const anonBoost = anonymizeScoreBoost(post.author);
+  const anon = clamp01(a.score + anonBoost);
+  const eng = engagementScore(post);
 
-            const ev = {
-                real: flattenEvidence(r.evidence),
-                anon: flattenEvidence(a.evidence),
-                empa: flattenEvidence(e.evidence),
-                part: flattenEvidence(p.evidence),
-                anonBoost: anonBoost ? `作者補正 +${anonBoost.toFixed(2)}` : ""
-            };
+  const platformModel = getPlatformModel(post.platform);
+  const fourMean = (r.score + anon + e.score + p.score) / 4;
 
-            return {
-                ...post,
-                text,
-                scores: { real: r.score, anon, empa: e.score, part: p.score, eng, buzz },
-                evidence: ev,
-                platformModel
-            };
-        }
+  const buzz = clamp01(
+    fourMean * Number(platformModel.fourFactorWeight ?? 0.70) +
+    eng * Number(platformModel.engagementWeight ?? 0.30)
+  );
 
-        function scoreRow(label, val, evidenceArr) {
-            const ev = (evidenceArr && evidenceArr.length)
-                ? `根拠: ${evidenceArr.map(x => `「${toSafeTextAsHtml(x)}」`).join("、")}`
-                : "根拠: （ヒット語彙なし）";
-            return `
+  const ev = {
+    real: flattenEvidence(r.evidence),
+    anon: flattenEvidence(a.evidence),
+    empa: flattenEvidence(e.evidence),
+    part: flattenEvidence(p.evidence),
+    anonBoost: anonBoost ? `作者補正 +${anonBoost.toFixed(2)}` : ""
+  };
+
+  return {
+    ...post,
+    text,
+    scores: { real:r.score, anon, empa:e.score, part:p.score, eng, buzz },
+    evidence: ev,
+    platformModel
+  };
+}
+
+function scoreRow(label, val, evidenceArr){
+  const ev = (evidenceArr && evidenceArr.length)
+    ? `根拠: ${evidenceArr.map(x=>`「${toSafeTextAsHtml(x)}」`).join("、")}`
+    : "根拠: （ヒット語彙なし）";
+  return `
     <div class="scores">
       <div>${label}</div>
       <div class="bar"><div class="fill" data-fill="${val}"></div></div>
@@ -418,50 +359,50 @@
       <div class="small" style="grid-column: 1 / -1; margin:-2px 0 6px;">${ev}</div>
     </div>
   `;
-        }
+}
 
-        function render(posts) {
-            const th = clamp01(Number($("buzzTh").value) || 0);
-            const sortMode = $("sort").value;
+function render(posts){
+  const th = clamp01(Number($("buzzTh").value) || 0);
+  const sortMode = $("sort").value;
 
-            const sorted = [...posts].sort((a, b) => {
-                const sa = a.scores, sb = b.scores;
-                const ta = Date.parse(a.postedAt || "") || 0;
-                const tb = Date.parse(b.postedAt || "") || 0;
-                if (sortMode === "time") return tb - ta;
-                if (sortMode === "buzz") return sb.buzz - sa.buzz;
-                if (sortMode === "real") return sb.real - sa.real;
-                if (sortMode === "anon") return sb.anon - sa.anon;
-                if (sortMode === "empa") return sb.empa - sa.empa;
-                if (sortMode === "part") return sb.part - sa.part;
-                return 0;
-            });
+  const sorted = [...posts].sort((a,b)=>{
+    const sa = a.scores, sb = b.scores;
+    const ta = Date.parse(a.postedAt || "") || 0;
+    const tb = Date.parse(b.postedAt || "") || 0;
+    if(sortMode==="time") return tb - ta;
+    if(sortMode==="buzz") return sb.buzz - sa.buzz;
+    if(sortMode==="real") return sb.real - sa.real;
+    if(sortMode==="anon") return sb.anon - sa.anon;
+    if(sortMode==="empa") return sb.empa - sa.empa;
+    if(sortMode==="part") return sb.part - sa.part;
+    return 0;
+  });
 
-            const flagged = sorted.filter(p => p.scores.buzz >= th);
-            const summary =
-                `解析件数 ${posts.length} 件・しきい値以上 ${flagged.length} 件。平均（実話性 ${fmt01(avg(posts, "real"))}／匿名性 ${fmt01(avg(posts, "anon"))}／共感性 ${fmt01(avg(posts, "empa"))}／参加性 ${fmt01(avg(posts, "part"))}／バズ推定 ${fmt01(avg(posts, "buzz"))}）`;
-            $("summary").innerHTML = `<span class="ok">読み込み完了。</span> ${summary}`;
+  const flagged = sorted.filter(p => p.scores.buzz >= th);
+  const summary =
+    `解析件数 ${posts.length} 件・しきい値以上 ${flagged.length} 件。平均（実話性 ${fmt01(avg(posts,"real"))}／匿名性 ${fmt01(avg(posts,"anon"))}／共感性 ${fmt01(avg(posts,"empa"))}／参加性 ${fmt01(avg(posts,"part"))}／バズ推定 ${fmt01(avg(posts,"buzz"))}）`;
+  $("summary").innerHTML = `<span class="ok">読み込み完了。</span> ${summary}`;
 
-            const root = $("results");
-            root.innerHTML = "";
+  const root = $("results");
+  root.innerHTML = "";
 
-            for (const p of sorted) {
-                const s = p.scores;
-                const isHot = s.buzz >= th;
-                const ev = p.evidence;
-                const pm = p.platformModel || getPlatformModel(p.platform);
+  for(const p of sorted){
+    const s = p.scores;
+    const isHot = s.buzz >= th;
+    const ev = p.evidence;
+    const pm = p.platformModel || getPlatformModel(p.platform);
 
-                const posted = p.postedAt ? new Date(p.postedAt).toLocaleString("ja-JP") : "不明";
-                const el = document.createElement("div");
-                el.className = "item";
-                el.innerHTML = `
+    const posted = p.postedAt ? new Date(p.postedAt).toLocaleString("ja-JP") : "不明";
+    const el = document.createElement("div");
+    el.className = "item";
+    el.innerHTML = `
       <div class="meta">
         <span class="tag">媒体: <span class="mono">${toSafeTextAsHtml(p.platform || "不明")}</span></span>
         <span class="tag">媒体特性: <span class="mono">${toSafeTextAsHtml(pm.description || "")}</span></span>
         <span class="tag">ID: <span class="mono">${toSafeTextAsHtml(p.id || "no-id")}</span></span>
         <span class="tag">作者: <span class="mono">${toSafeTextAsHtml(p.author || "不明")}</span></span>
         <span class="tag">投稿: <span class="mono">${toSafeTextAsHtml(posted)}</span></span>
-        <span class="tag">反応: <span class="mono">❤${Number(p.likes || 0)} ↻${Number(p.shares || 0)} 💬${Number(p.comments || 0)}</span></span>
+        <span class="tag">反応: <span class="mono">❤${Number(p.likes||0)} ↻${Number(p.shares||0)} 💬${Number(p.comments||0)}</span></span>
         <span class="tag">バズ推定: <span class="mono">${fmtPct(s.buzz)}</span></span>
       </div>
 
@@ -479,84 +420,160 @@
       </div>
     `;
 
-                for (const bar of el.querySelectorAll("[data-fill]")) {
-                    const v = Number(bar.getAttribute("data-fill"));
-                    bar.style.width = `${Math.round(v * 100)}%`;
-                }
-                root.appendChild(el);
-            }
-        }
+    for(const bar of el.querySelectorAll("[data-fill]")){
+      const v = Number(bar.getAttribute("data-fill"));
+      bar.style.width = `${Math.round(v*100)}%`;
+    }
+    root.appendChild(el);
+  }
+}
 
-        function normalizePost(p, i) {
-            return {
-                id: p.id ?? `p${i + 1}`,
-                platform: p.platform ?? "不明",
-                author: p.author ?? "不明",
-                postedAt: p.postedAt ?? nowIso(),
-                likes: p.likes ?? 0,
-                shares: p.shares ?? 0,
-                comments: p.comments ?? 0,
-                text: p.text ?? ""
-            };
-        }
+async function loadJsonFile(path){
+  const res = await fetch(path, { cache: "no-store" });
+  if(!res.ok){
+    throw new Error(`${path} の読み込みに失敗しました（HTTP ${res.status}）。`);
+  }
+  return await res.json();
+}
 
-        async function loadJsonFile(path) {
-            const res = await fetch(path, { cache: "no-store" });
-            if (!res.ok) {
-                throw new Error(`${path} の読み込みに失敗しました（HTTP ${res.status}）。`);
-            }
-            return await res.json();
-        }
+function safeJsonParse(text, label){
+  try{
+    return { ok:true, value: JSON.parse(text) };
+  }catch(e){
+    return { ok:false, error: `${label} のJSONが壊れています。${e.message || String(e)}` };
+  }
+}
 
-        async function loadAllAndAnalyze() {
-            $("summary").innerHTML = "読み込み中。";
-            $("btnExport").disabled = true;
+function validateLex(obj){
+  const keys = ["real","anon","empa","part"];
+  for(const k of keys){
+    if(!(k in obj)) return `lex.json に ${k} がありません。`;
+    if(!Array.isArray(obj[k])) return `lex.json の ${k} は配列である必要があります。`;
+    for(const item of obj[k]){
+      if(!item || typeof item !== "object") return `lex.json の ${k} 内にオブジェクトでない要素があります。`;
+      if(!Array.isArray(item.w)) return `lex.json の ${k} の各要素は w 配列が必要です。`;
+      if(typeof item.p !== "number") return `lex.json の ${k} の各要素は p 数値が必要です。`;
+    }
+  }
+  return "";
+}
 
-            const gain = Number($("gain").value) || 1.0;
+function validatePlatforms(obj){
+  if(!obj || typeof obj !== "object") return "platforms.json はオブジェクトである必要があります。";
+  if(!obj.default) return "platforms.json に default がありません。";
+  return "";
+}
 
-            try {
-                LEX = await loadJsonFile("lex.json");
-                PLATFORMS = await loadJsonFile("platforms.json");
-                const data = await loadJsonFile("data.json");
+function validateData(arr){
+  if(!Array.isArray(arr)) return "data.json は配列である必要があります。";
+  for(let i=0;i<arr.length;i++){
+    const p = arr[i];
+    if(!p || typeof p !== "object") return `data.json の ${i} 番目がオブジェクトではありません。`;
+    if(typeof p.text !== "string") return `data.json の ${i} 番目に text 文字列が必要です。`;
+  }
+  return "";
+}
 
-                const posts = (Array.isArray(data) ? data : [data]).map(normalizePost);
+function setLeftStatusOk(msg){
+  $("leftStatus").innerHTML = `<span class="ok">${toSafeTextAsHtml(msg)}</span>`;
+}
 
-                $("dataPreview").value = JSON.stringify(posts, null, 2);
+function setLeftStatusError(msg){
+  $("leftStatus").innerHTML = `<span class="danger">${toSafeTextAsHtml(msg)}</span>`;
+}
 
-                lastAnalyzed = posts.map(p => analyzePost(p, gain));
-                $("btnExport").disabled = lastAnalyzed.length === 0;
+function analyzeFromObjects(dataObj, lexObj, platformsObj){
+  const gain = Number($("gain").value) || 1.0;
 
-                render(lastAnalyzed);
-            } catch (err) {
-                $("summary").innerHTML = `<span class="danger">${toSafeTextAsHtml(err.message || String(err))}</span>`;
-                $("results").innerHTML = "";
-                $("dataPreview").value = "";
-                lastAnalyzed = [];
-            }
-        }
+  LEX = lexObj;
+  PLATFORMS = platformsObj;
 
-        function exportJson() {
-            if (!lastAnalyzed.length) return;
-            const blob = new Blob([JSON.stringify(lastAnalyzed, null, 2)], { type: "application/json" });
-            const url = URL.createObjectURL(blob);
-            const a = document.createElement("a");
-            a.href = url;
-            a.download = "kaidan_4factor_result.json";
-            document.body.appendChild(a);
-            a.click();
-            a.remove();
-            setTimeout(() => URL.revokeObjectURL(url), 1000);
-        }
+  const posts = (Array.isArray(dataObj) ? dataObj : [dataObj]).map(normalizePost);
+  lastAnalyzed = posts.map(p => analyzePost(p, gain));
 
-        $("btnReload").addEventListener("click", loadAllAndAnalyze);
-        $("btnExport").addEventListener("click", exportJson);
-        $("sort").addEventListener("change", () => render(lastAnalyzed));
-        $("buzzTh").addEventListener("input", () => render(lastAnalyzed));
-        $("gain").addEventListener("change", () => loadAllAndAnalyze());
+  $("btnExport").disabled = lastAnalyzed.length === 0;
+  render(lastAnalyzed);
+}
 
-        // 初期ロード
-        loadAllAndAnalyze();
-    </script>
+function analyzeFromTextareas(){
+  $("summary").textContent = "再計算中。";
+  $("btnExport").disabled = true;
+
+  const pData = safeJsonParse($("taData").value, "data.json");
+  if(!pData.ok){ setLeftStatusError(pData.error); $("summary").innerHTML = `<span class="danger">${toSafeTextAsHtml(pData.error)}</span>`; return; }
+
+  const pLex = safeJsonParse($("taLex").value, "lex.json");
+  if(!pLex.ok){ setLeftStatusError(pLex.error); $("summary").innerHTML = `<span class="danger">${toSafeTextAsHtml(pLex.error)}</span>`; return; }
+
+  const pPlat = safeJsonParse($("taPlatforms").value, "platforms.json");
+  if(!pPlat.ok){ setLeftStatusError(pPlat.error); $("summary").innerHTML = `<span class="danger">${toSafeTextAsHtml(pPlat.error)}</span>`; return; }
+
+  const lexErr = validateLex(pLex.value);
+  if(lexErr){ setLeftStatusError(lexErr); $("summary").innerHTML = `<span class="danger">${toSafeTextAsHtml(lexErr)}</span>`; return; }
+
+  const platErr = validatePlatforms(pPlat.value);
+  if(platErr){ setLeftStatusError(platErr); $("summary").innerHTML = `<span class="danger">${toSafeTextAsHtml(platErr)}</span>`; return; }
+
+  const dataErr = validateData(pData.value);
+  if(dataErr){ setLeftStatusError(dataErr); $("summary").innerHTML = `<span class="danger">${toSafeTextAsHtml(dataErr)}</span>`; return; }
+
+  try{
+    analyzeFromObjects(pData.value, pLex.value, pPlat.value);
+    setLeftStatusOk("フォームの内容で再計算しました。");
+  }catch(err){
+    const msg = err.message || String(err);
+    setLeftStatusError(msg);
+    $("summary").innerHTML = `<span class="danger">${toSafeTextAsHtml(msg)}</span>`;
+  }
+}
+
+async function loadAllToTextareas(){
+  $("summary").textContent = "読み込み中。";
+  $("btnExport").disabled = true;
+  setLeftStatusOk("外部JSONを読み込み中です。");
+
+  try{
+    const lex = await loadJsonFile("lex.json");
+    const plats = await loadJsonFile("platforms.json");
+    const data = await loadJsonFile("data.json");
+
+    $("taLex").value = JSON.stringify(lex, null, 2);
+    $("taPlatforms").value = JSON.stringify(plats, null, 2);
+    $("taData").value = JSON.stringify(data, null, 2);
+
+    setLeftStatusOk("外部JSONをフォームに反映しました。");
+    analyzeFromTextareas();
+  }catch(err){
+    const msg = err.message || String(err);
+    setLeftStatusError(msg);
+    $("summary").innerHTML = `<span class="danger">${toSafeTextAsHtml(msg)}</span>`;
+    $("results").innerHTML = "";
+    lastAnalyzed = [];
+  }
+}
+
+function exportJson(){
+  if(!lastAnalyzed.length) return;
+  const blob = new Blob([JSON.stringify(lastAnalyzed, null, 2)], {type:"application/json"});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = "kaidan_4factor_result.json";
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  setTimeout(()=>URL.revokeObjectURL(url), 1000);
+}
+
+$("btnReload").addEventListener("click", loadAllToTextareas);
+$("btnRecalc").addEventListener("click", analyzeFromTextareas);
+$("btnExport").addEventListener("click", exportJson);
+
+$("sort").addEventListener("change", ()=> render(lastAnalyzed));
+$("buzzTh").addEventListener("input", ()=> render(lastAnalyzed));
+$("gain").addEventListener("change", ()=> analyzeFromTextareas());
+
+loadAllToTextareas();
+</script>
 </body>
-
 </html>
